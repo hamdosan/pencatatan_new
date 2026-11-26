@@ -6,6 +6,10 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/expense_controller.dart';
+import '../models/expense.dart';
+import '../services/location_service.dart';
+import 'expense_form_page.dart';
+import 'widgets/category_icons.dart';
 import 'widgets/formatters.dart';
 import 'widgets/month_selector.dart';
 
@@ -65,6 +69,13 @@ class DashboardPage extends StatelessWidget {
               child: _ChartCard(
                 title: 'Tren ${ExpenseController.trendMonths} bulan',
                 child: _TrendLineChart(controller: c),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: _ChartCard(
+                title: 'Riwayat lokasi',
+                child: _LocationHistory(controller: c),
               ),
             ),
           ],
@@ -469,6 +480,152 @@ class _TrendLineChart extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Daftar pengeluaran bulan ini yang tercatat dengan lokasi.
+class _LocationHistory extends StatefulWidget {
+  const _LocationHistory({required this.controller});
+  final ExpenseController controller;
+
+  @override
+  State<_LocationHistory> createState() => _LocationHistoryState();
+}
+
+class _LocationHistoryState extends State<_LocationHistory> {
+  static const _collapsedCount = 5;
+  bool _expanded = false;
+
+  Future<void> _openMap(Expense e) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok =
+        await LocationService.instance.openInMaps(e.latitude!, e.longitude!);
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Tidak bisa membuka aplikasi peta')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.controller;
+    final items = c.locationHistory;
+    final theme = Theme.of(context);
+
+    if (items.isEmpty) {
+      return const SizedBox(
+        height: 96,
+        child: Center(
+          child: Text(
+            'Belum ada pengeluaran dengan lokasi.\n'
+            'Tambahkan lokasi saat mencatat pengeluaran.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    final visible =
+        _expanded ? items : items.take(_collapsedCount).toList();
+
+    // Jumlah transaksi per tempat untuk menampilkan lokasi tersering.
+    final visits = <String, int>{};
+    for (final e in items) {
+      final key = e.address ??
+          LocationService.formatCoordinates(e.latitude!, e.longitude!);
+      visits[key] = (visits[key] ?? 0) + 1;
+    }
+    final top = visits.entries.reduce((a, b) => b.value > a.value ? b : a);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${items.length} transaksi berlokasi'
+          '${top.value > 1 ? ' · tersering: ${top.key} (${top.value}x)' : ''}',
+          style: theme.textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        for (final e in visible)
+          _LocationTile(
+            expense: e,
+            controller: c,
+            onMap: () => _openMap(e),
+          ),
+        if (items.length > _collapsedCount)
+          Center(
+            child: TextButton(
+              onPressed: () => setState(() => _expanded = !_expanded),
+              child: Text(_expanded
+                  ? 'Tampilkan lebih sedikit'
+                  : 'Lihat semua (${items.length})'),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _LocationTile extends StatelessWidget {
+  const _LocationTile({
+    required this.expense,
+    required this.controller,
+    required this.onMap,
+  });
+
+  final Expense expense;
+  final ExpenseController controller;
+  final VoidCallback onMap;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = expense;
+    final cat = controller.categoryOf(e.categoryId);
+    final color = Color(cat?.colorValue ?? 0xFF607D8B);
+    final place = e.address ??
+        LocationService.formatCoordinates(e.latitude!, e.longitude!);
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor: color.withValues(alpha: 0.15),
+        child: Icon(iconFor(cat?.icon ?? 'other'), color: color),
+      ),
+      title: Text(
+        e.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.place, size: 14),
+              const SizedBox(width: 2),
+              Expanded(
+                child: Text(
+                  place,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          Text('${formatDate(e.date)} · ${formatRupiah(e.amount)}'),
+        ],
+      ),
+      isThreeLine: true,
+      trailing: IconButton(
+        icon: const Icon(Icons.map_outlined),
+        tooltip: 'Buka di peta',
+        onPressed: onMap,
+      ),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ExpenseFormPage(expense: e)),
       ),
     );
   }

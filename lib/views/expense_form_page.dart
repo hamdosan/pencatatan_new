@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../controllers/expense_controller.dart';
 import '../models/expense.dart';
+import '../services/location_service.dart';
 import 'widgets/category_dropdown.dart';
 import 'widgets/delete_dialog.dart';
 import 'widgets/formatters.dart';
@@ -24,6 +25,10 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
   int? _categoryId;
   late DateTime _date;
   bool _saving = false;
+  double? _lat;
+  double? _lng;
+  String? _address;
+  bool _locating = false;
 
   bool get _isEdit => widget.expense != null;
 
@@ -38,6 +43,9 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
     _noteCtrl = TextEditingController(text: e?.note ?? '');
     _categoryId = e?.categoryId;
     _date = e?.date ?? DateTime.now();
+    _lat = e?.latitude;
+    _lng = e?.longitude;
+    _address = e?.address;
   }
 
   @override
@@ -58,6 +66,105 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
     if (picked != null) setState(() => _date = picked);
   }
 
+  Future<void> _pickLocation() async {
+    setState(() => _locating = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final loc = await LocationService.instance.getCurrentLocation();
+      if (!mounted) return;
+      setState(() {
+        _lat = loc.latitude;
+        _lng = loc.longitude;
+        _address = loc.address;
+      });
+    } on LocationException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Gagal mengambil lokasi: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  void _clearLocation() => setState(() {
+        _lat = null;
+        _lng = null;
+        _address = null;
+      });
+
+  Widget _buildLocationField(BuildContext context) {
+    final hasLocation = _lat != null && _lng != null;
+    final theme = Theme.of(context);
+    return InputDecorator(
+      decoration: const InputDecoration(
+        labelText: 'Lokasi (opsional)',
+        border: OutlineInputBorder(),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasLocation) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.place, color: theme.colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_address ?? 'Alamat tidak diketahui'),
+                      Text(
+                        LocationService.formatCoordinates(_lat!, _lng!),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          Wrap(
+            spacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _locating || _saving ? null : _pickLocation,
+                icon: _locating
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.my_location),
+                label: Text(_locating
+                    ? 'Mencari lokasi...'
+                    : hasLocation
+                        ? 'Perbarui lokasi'
+                        : 'Ambil lokasi saat ini'),
+              ),
+              if (hasLocation) ...[
+                TextButton.icon(
+                  onPressed: () => LocationService.instance
+                      .openInMaps(_lat!, _lng!),
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('Peta'),
+                ),
+                TextButton.icon(
+                  onPressed: _locating ? null : _clearLocation,
+                  icon: const Icon(Icons.close),
+                  label: const Text('Hapus'),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -71,6 +178,9 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
       categoryId: _categoryId!,
       date: _date,
       note: note.isEmpty ? null : note,
+      latitude: _lat,
+      longitude: _lng,
+      address: _lat == null ? null : _address,
     );
 
     if (_isEdit) {
@@ -173,6 +283,8 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
                   border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 16),
+              _buildLocationField(context),
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: _saving ? null : _save,

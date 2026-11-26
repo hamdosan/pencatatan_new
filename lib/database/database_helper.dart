@@ -9,7 +9,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   static const _dbName = 'expense_tracker.db';
-  static const _dbVersion = 3;
+  static const _dbVersion = 4;
 
   static Database? _database;
 
@@ -45,6 +45,11 @@ class DatabaseHelper {
         );
       }
     }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE expenses ADD COLUMN latitude REAL');
+      await db.execute('ALTER TABLE expenses ADD COLUMN longitude REAL');
+      await db.execute('ALTER TABLE expenses ADD COLUMN address TEXT');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -65,6 +70,9 @@ class DatabaseHelper {
         category_id INTEGER NOT NULL,
         date        TEXT    NOT NULL,
         note        TEXT,
+        latitude    REAL,
+        longitude   REAL,
+        address     TEXT,
         created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
         FOREIGN KEY (category_id) REFERENCES categories (id)
           ON DELETE RESTRICT

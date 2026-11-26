@@ -45,6 +45,10 @@ class ExpenseController extends ChangeNotifier {
     return _selectedMonth.year == now.year && _selectedMonth.month == now.month;
   }
 
+  /// Pengeluaran bulan terpilih yang punya lokasi, terbaru lebih dulu.
+  List<Expense> get locationHistory =>
+      _expenses.where((e) => e.hasLocation).toList();
+
   int get totalAmount => _expenses.fold(0, (sum, e) => sum + e.amount);
 
   List<MapEntry<int, int>> get totalByCategory {

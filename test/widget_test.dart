@@ -26,6 +26,29 @@ void main() {
     expect(restored.note, 'Nasi padang');
   });
 
+  test('Expense location round-trip', () {
+    final expense = Expense(
+      title: 'Kopi',
+      amount: 18000,
+      categoryId: 1,
+      date: DateTime(2026, 11, 26),
+      latitude: -6.2,
+      longitude: 106.816666,
+      address: 'Jl. Sudirman, Jakarta',
+    );
+    final restored = Expense.fromMap(expense.toMap());
+    expect(restored.hasLocation, isTrue);
+    expect(restored.latitude, -6.2);
+    expect(restored.longitude, 106.816666);
+    expect(restored.address, 'Jl. Sudirman, Jakarta');
+
+    final noLoc = Expense.fromMap(
+      Expense(title: 'A', amount: 1, categoryId: 1, date: DateTime(2026))
+          .toMap(),
+    );
+    expect(noLoc.hasLocation, isFalse);
+  });
+
   test('Category toMap/fromMap round-trip', () {
     const category = Category(
       id: 3,
