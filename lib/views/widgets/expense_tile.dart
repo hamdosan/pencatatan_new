@@ -37,7 +37,7 @@ class ExpenseTile extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.15),
+          backgroundColor: color.withValues(alpha: 0.15),
           child: Icon(iconFor(cat?.icon ?? 'other'), color: color),
         ),
         title: Text(expense.title),

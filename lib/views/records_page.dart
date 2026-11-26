@@ -154,7 +154,7 @@ class _CategoryBar extends StatelessWidget {
               value: ratio,
               minHeight: 6,
               color: color,
-              backgroundColor: color.withOpacity(0.2),
+              backgroundColor: color.withValues(alpha: 0.2),
             ),
           ),
         ],
