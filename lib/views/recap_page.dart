@@ -7,6 +7,7 @@ import '../services/excel_export_service.dart';
 import 'history_page.dart';
 import 'widgets/formatters.dart';
 import 'widgets/month_selector.dart' show kFirstYear;
+import 'widgets/glass.dart';
 
 /// Rekap pencatatan per bulan dalam satu tahun.
 class RecapPage extends StatefulWidget {
@@ -77,7 +78,8 @@ class _RecapPageState extends State<RecapPage> {
         recaps: available,
         initial: {
           if (selected.year == _year &&
-              available.any((r) => r.month.month == selected.month && r.count > 0))
+              available
+                  .any((r) => r.month.month == selected.month && r.count > 0))
             selected.month,
         },
       ),
@@ -123,7 +125,9 @@ class _RecapPageState extends State<RecapPage> {
     final now = DateTime.now();
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return AppBackground(
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Rekap Bulanan'),
         actions: [
@@ -168,7 +172,8 @@ class _RecapPageState extends State<RecapPage> {
               future: _future,
               builder: (context, snap) {
                 if (snap.hasError) {
-                  return Center(child: Text('Gagal memuat rekap: ${snap.error}'));
+                  return Center(
+                      child: Text('Gagal memuat rekap: ${snap.error}'));
                 }
                 if (!snap.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -180,7 +185,8 @@ class _RecapPageState extends State<RecapPage> {
                 ].reversed.toList();
                 final yearTotal = months.fold(0, (s, r) => s + r.total);
                 final yearCount = months.fold(0, (s, r) => s + r.count);
-                final maxTotal = months.fold(0, (m, r) => r.total > m ? r.total : m);
+                final maxTotal =
+                    months.fold(0, (m, r) => r.total > m ? r.total : m);
 
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -224,7 +230,7 @@ class _RecapPageState extends State<RecapPage> {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
@@ -329,7 +335,6 @@ class _MonthRecapTile extends StatelessWidget {
     );
   }
 }
-
 
 /// Bottom sheet pilih bulan yang akan diekspor ke Excel.
 class _MonthExportSheet extends StatefulWidget {

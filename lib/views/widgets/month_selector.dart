@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../controllers/expense_controller.dart';
+import '../theme/app_theme.dart';
 
 /// Tahun paling awal yang bisa dipilih.
 const kFirstYear = 2000;
@@ -36,10 +37,19 @@ class MonthSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = controller.selectedMonth;
-    final style = Theme.of(context).textTheme.titleMedium;
+    final style = Theme.of(context)
+        .textTheme
+        .titleMedium
+        ?.copyWith(fontWeight: FontWeight.w600);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+    final p = AppPalette.of(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      decoration: BoxDecoration(
+        color: p.glass,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: p.glassBorder),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

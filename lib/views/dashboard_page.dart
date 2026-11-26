@@ -9,8 +9,10 @@ import '../controllers/expense_controller.dart';
 import '../models/expense.dart';
 import '../services/location_service.dart';
 import 'expense_form_page.dart';
+import 'theme/app_theme.dart';
 import 'widgets/category_icons.dart';
 import 'widgets/formatters.dart';
+import 'widgets/glass.dart';
 import 'widgets/month_selector.dart';
 
 const _chartAnim = Duration(milliseconds: 450);
@@ -25,66 +27,181 @@ class DashboardPage extends StatelessWidget {
     final c = context.watch<ExpenseController>();
     if (c.error != null) return Center(child: Text(c.error!));
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final wide = constraints.maxWidth >= 720;
-      final charts = <Widget>[
-        _ChartCard(
-          title: 'Pengeluaran harian',
-          child: _DailyBarChart(controller: c),
-        ),
-        _ChartCard(
-          title: 'Per kategori',
-          child: _CategoryPieChart(controller: c),
-        ),
-      ];
-
-      return ListView(
-        padding: const EdgeInsets.only(bottom: 88),
-        children: [
-          MonthSelector(controller: c),
-          if (c.isLoading)
-            const Padding(
-              padding: EdgeInsets.all(48),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else ...[
-            _StatRow(controller: c),
-            if (wide)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [for (final w in charts) Expanded(child: w)],
-                  ),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Column(children: charts),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: _ChartCard(
-                title: 'Tren ${ExpenseController.trendMonths} bulan',
-                child: _TrendLineChart(controller: c),
-              ),
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 150),
+      children: [
+        MonthSelector(controller: c),
+        if (c.isLoading)
+          const Padding(
+            padding: EdgeInsets.all(48),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else ...[
+          _Hero(controller: c),
+          _StatRow(controller: c),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: _TrendLineChart(controller: c),
+          ),
+          const SectionHeader(
+            title: 'Per kategori',
+            padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
+          ),
+          _CategoryTiles(controller: c),
+          GlassCard(
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SectionHeader(title: 'Pengeluaran harian'),
+                const SizedBox(height: 16),
+                _DailyBarChart(controller: c),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: _ChartCard(
-                title: 'Riwayat lokasi',
-                child: _LocationHistory(controller: c),
-              ),
-            ),
-          ],
+          ),
+          FrostPanel(
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: _LocationHistory(controller: c),
+          ),
         ],
-      );
-    });
+      ],
+    );
   }
 }
 
+/// Sapaan di kiri + kartu total bulan ini di kanan.
+class _Hero extends StatelessWidget {
+  const _Hero({required this.controller});
+  final ExpenseController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    final p = AppPalette.of(context);
+    final text = Theme.of(context).textTheme;
+    final trend = c.monthlyTrend;
+    final prev = trend.length >= 2 ? trend[trend.length - 2].$2 : 0;
+    final change = prev == 0 ? null : (c.totalAmount - prev) * 100 / prev;
+    final up = (change ?? 0) > 0;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 16, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            flex: 9,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _greeting(),
+                  style: text.bodyMedium?.copyWith(color: p.muted),
+                ),
+                const SizedBox(height: 6),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Yuk, lihat\npengeluaranmu',
+                    style: text.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 10,
+            child: GlassCard(
+              radius: 22,
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.22),
+                  Colors.white.withValues(alpha: 0.06),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Total\n${DateFormat('MMMM', 'id_ID').format(c.selectedMonth)}',
+                          style: text.labelMedium?.copyWith(
+                            color: p.muted,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.account_balance_wallet_outlined,
+                          size: 22, color: p.muted),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      formatRupiah(c.totalAmount),
+                      style: text.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (change != null)
+                    Row(
+                      children: [
+                        Icon(
+                          up ? Icons.north_east : Icons.south_east,
+                          size: 14,
+                          color: up
+                              ? const Color(0xFFFF8A80)
+                              : const Color(0xFF7EE2A8),
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            '${change.abs().toStringAsFixed(0)}% vs bln lalu',
+                            style: text.labelSmall?.copyWith(color: p.muted),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      '${c.expenses.length} transaksi',
+                      style: text.labelSmall?.copyWith(color: p.muted),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 11) return 'Selamat pagi!';
+    if (h < 15) return 'Selamat siang!';
+    if (h < 19) return 'Selamat sore!';
+    return 'Selamat malam!';
+  }
+}
+
+/// Dua kartu kecil: rata-rata per hari & jumlah transaksi.
 class _StatRow extends StatelessWidget {
   const _StatRow({required this.controller});
   final ExpenseController controller;
@@ -92,88 +209,86 @@ class _StatRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
+    final p = AppPalette.of(context);
+    final text = Theme.of(context).textTheme;
     final now = DateTime.now();
     final daysCounted = c.isCurrentMonth ? now.day : c.dailyTotals.length;
     final avg = daysCounted == 0 ? 0 : c.totalAmount ~/ daysCounted;
 
-    final stats = [
-      ('Total', formatRupiah(c.totalAmount), Icons.account_balance_wallet),
-      ('Rata-rata/hari', formatRupiah(avg), Icons.today),
-      ('Transaksi', '${c.expenses.length}', Icons.receipt_long),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-      child: Row(
-        children: [
-          for (final (label, value, icon) in stats)
-            Expanded(
-              child: Card(
-                margin: const EdgeInsets.all(4),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
+    Widget chip(IconData icon, String label, String value, {int flex = 1}) =>
+        Expanded(
+          flex: flex,
+          child: GlassCard(
+            radius: 20,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: p.glass,
+                    border: Border.all(color: p.glassBorder),
+                  ),
+                  child: Icon(icon, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(icon,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.primary),
-                      const SizedBox(height: 8),
+                      Text(
+                        label,
+                        style: text.labelSmall?.copyWith(color: p.muted),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
                         child: Text(
                           value,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                          style: text.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                      Text(label,
-                          style: Theme.of(context).textTheme.labelSmall),
                     ],
                   ),
                 ),
-              ),
+              ],
             ),
+          ),
+        );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Row(
+        children: [
+          chip(Icons.receipt_long, 'Transaksi', '${c.expenses.length}',
+              flex: 4),
+          const SizedBox(width: 12),
+          chip(Icons.today, 'Rata-rata / hari', formatRupiah(avg), flex: 6),
         ],
       ),
     );
   }
 }
 
-class _ChartCard extends StatelessWidget {
-  const _ChartCard({required this.title, required this.child});
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.all(4),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 16),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _EmptyChart extends StatelessWidget {
-  const _EmptyChart();
+  const _EmptyChart({this.height = 180});
+  final double height;
 
   @override
-  Widget build(BuildContext context) => const SizedBox(
-        height: 180,
-        child: Center(child: Text('Belum ada data')),
+  Widget build(BuildContext context) => SizedBox(
+        height: height,
+        child: Center(
+          child: Text(
+            'Belum ada data',
+            style: TextStyle(color: AppPalette.of(context).muted),
+          ),
+        ),
       );
 }
 
@@ -196,6 +311,299 @@ double _niceMax(int max) {
   return 10 * mag;
 }
 
+/// Grafik garis halus 6 bulan; titik bulan terpilih selalu disorot.
+class _TrendLineChart extends StatelessWidget {
+  const _TrendLineChart({required this.controller});
+  final ExpenseController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final trend = controller.monthlyTrend;
+    final p = AppPalette.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final labelStyle = text.labelSmall?.copyWith(color: p.muted);
+
+    final header = Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Tren ${ExpenseController.trendMonths} bulan',
+              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (trend.every((t) => t.$2 == 0)) {
+      return Column(children: [header, const _EmptyChart(height: 200)]);
+    }
+
+    final base = _niceMax(trend.map((t) => t.$2).reduce(math.max));
+    final maxY = base * 1.25;
+    final line = scheme.onSurface;
+    final bar = LineChartBarData(
+      spots: [
+        for (var i = 0; i < trend.length; i++)
+          FlSpot(i.toDouble(), trend[i].$2.toDouble()),
+      ],
+      isCurved: true,
+      curveSmoothness: 0.35,
+      preventCurveOverShooting: true,
+      color: line,
+      barWidth: 2.5,
+      isStrokeCapRound: true,
+      dotData: const FlDotData(show: false),
+      showingIndicators: [trend.length - 1],
+      belowBarData: BarAreaData(
+        show: true,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            line.withValues(alpha: 0.18),
+            line.withValues(alpha: 0),
+          ],
+        ),
+      ),
+    );
+    final lastIndex = trend.length - 1;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        header,
+        SizedBox(
+          height: 220,
+          child: LineChart(
+            duration: _chartAnim,
+            curve: _chartCurve,
+            LineChartData(
+              minY: 0,
+              maxY: maxY,
+              minX: 0,
+              maxX: lastIndex.toDouble(),
+              lineBarsData: [bar],
+              showingTooltipIndicators: [
+                ShowingTooltipIndicators([
+                  LineBarSpot(bar, 0, bar.spots[lastIndex]),
+                ]),
+              ],
+              gridData: const FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(),
+                rightTitles: const AxisTitles(),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    interval: base / 2,
+                    getTitlesWidget: (v, meta) => SideTitleWidget(
+                      meta: meta,
+                      child: Text(
+                        v > base ? '' : _compact(v),
+                        style: labelStyle,
+                      ),
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: 1,
+                    reservedSize: 26,
+                    getTitlesWidget: (v, meta) {
+                      final i = v.toInt();
+                      if (i < 0 || i >= trend.length || v != i.toDouble()) {
+                        return const SizedBox.shrink();
+                      }
+                      return SideTitleWidget(
+                        meta: meta,
+                        child: Text(
+                          DateFormat('MMM', 'id_ID').format(trend[i].$1),
+                          style: labelStyle,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              lineTouchData: LineTouchData(
+                handleBuiltInTouches: false,
+                getTouchedSpotIndicator: (barData, indexes) => [
+                  for (final _ in indexes)
+                    TouchedSpotIndicatorData(
+                      FlLine(
+                        color: line.withValues(alpha: 0.7),
+                        strokeWidth: 1.5,
+                        dashArray: [5, 4],
+                      ),
+                      FlDotData(
+                        getDotPainter: (spot, percent, bar, index) =>
+                            FlDotCirclePainter(
+                          radius: 5,
+                          color: line,
+                          strokeWidth: 3,
+                          strokeColor: line.withValues(alpha: 0.35),
+                        ),
+                      ),
+                    ),
+                ],
+                touchTooltipData: LineTouchTooltipData(
+                  fitInsideHorizontally: true,
+                  fitInsideVertically: true,
+                  getTooltipColor: (_) => p.glass.withValues(alpha: 0.35),
+                  tooltipBorder: BorderSide(color: p.glassBorder),
+                  tooltipBorderRadius: BorderRadius.circular(12),
+                  tooltipPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  getTooltipItems: (spots) => [
+                    for (final s in spots)
+                      LineTooltipItem(
+                        _compactRupiah(s.y),
+                        TextStyle(
+                          color: line,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                        children: [
+                          TextSpan(
+                            text:
+                                '\n${DateFormat('MMM y', 'id_ID').format(trend[s.x.toInt()].$1)}',
+                            style: TextStyle(
+                              color: p.muted,
+                              fontWeight: FontWeight.w400,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _compactRupiah(num v) => 'Rp ${_compact(v)}';
+
+/// Kartu-kartu kategori 2 kolom (seperti "Bills due" pada referensi).
+class _CategoryTiles extends StatelessWidget {
+  const _CategoryTiles({required this.controller});
+  final ExpenseController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    final data = c.totalByCategory;
+    final p = AppPalette.of(context);
+    final text = Theme.of(context).textTheme;
+
+    if (data.isEmpty) {
+      return const GlassCard(
+        margin: EdgeInsets.symmetric(horizontal: 16),
+        child: _EmptyChart(height: 80),
+      );
+    }
+
+    final total = c.totalAmount;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: LayoutBuilder(builder: (context, constraints) {
+        const gap = 12.0;
+        final cols = constraints.maxWidth >= 600 ? 3 : 2;
+        final w = (constraints.maxWidth - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final entry in data)
+              () {
+                final cat = c.categoryOf(entry.key);
+                final color = Color(cat?.colorValue ?? 0xFF607D8B);
+                final ratio = total == 0 ? 0.0 : entry.value / total;
+                return SizedBox(
+                  width: w,
+                  child: GlassCard(
+                    radius: 22,
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                iconFor(cat?.icon ?? 'other'),
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${(ratio * 100).round()}%',
+                              style: text.labelMedium?.copyWith(
+                                color: p.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          cat?.name ?? '-',
+                          style: text.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            formatRupiah(entry.value),
+                            style: text.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: ratio,
+                            minHeight: 4,
+                            color: color,
+                            backgroundColor: p.glass,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }(),
+          ],
+        );
+      }),
+    );
+  }
+}
+
 class _DailyBarChart extends StatelessWidget {
   const _DailyBarChart({required this.controller});
   final ExpenseController controller;
@@ -205,11 +613,14 @@ class _DailyBarChart extends StatelessWidget {
     final daily = controller.dailyTotals;
     if (daily.every((v) => v == 0)) return const _EmptyChart();
 
+    final p = AppPalette.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final labelStyle =
+        Theme.of(context).textTheme.labelSmall?.copyWith(color: p.muted);
     final maxY = _niceMax(daily.reduce(math.max));
 
     return SizedBox(
-      height: 200,
+      height: 180,
       child: BarChart(
         duration: _chartAnim,
         curve: _chartCurve,
@@ -221,21 +632,18 @@ class _DailyBarChart extends StatelessWidget {
               BarChartGroupData(x: i + 1, barRods: [
                 BarChartRodData(
                   toY: daily[i].toDouble(),
-                  color: scheme.primary,
+                  color: scheme.onSurface.withValues(alpha: 0.85),
                   width: 5,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(3),
+                  backDrawRodData: BackgroundBarChartRodData(
+                    show: true,
+                    toY: maxY,
+                    color: p.glass,
+                  ),
                 ),
               ]),
           ],
-          gridData: FlGridData(
-            drawVerticalLine: false,
-            horizontalInterval: maxY / 4,
-            getDrawingHorizontalLine: (_) => FlLine(
-              color: scheme.outlineVariant,
-              strokeWidth: 1,
-              dashArray: [4, 4],
-            ),
-          ),
+          gridData: const FlGridData(show: false),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
             topTitles: const AxisTitles(),
@@ -243,26 +651,24 @@ class _DailyBarChart extends StatelessWidget {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 40,
-                interval: maxY / 4,
+                reservedSize: 36,
+                interval: maxY / 2,
                 getTitlesWidget: (v, meta) => SideTitleWidget(
                   meta: meta,
-                  child: Text(_compact(v),
-                      style: Theme.of(context).textTheme.labelSmall),
+                  child: Text(_compact(v), style: labelStyle),
                 ),
               ),
             ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 24,
+                reservedSize: 22,
                 getTitlesWidget: (v, meta) {
                   final d = v.toInt();
                   final show = d == 1 || d % 5 == 0;
                   return SideTitleWidget(
                     meta: meta,
-                    child: Text(show ? '$d' : '',
-                        style: Theme.of(context).textTheme.labelSmall),
+                    child: Text(show ? '$d' : '', style: labelStyle),
                   );
                 },
               ),
@@ -271,7 +677,9 @@ class _DailyBarChart extends StatelessWidget {
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
               getTooltipColor: (_) => scheme.inverseSurface,
-              getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+              tooltipBorderRadius: BorderRadius.circular(12),
+              getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                  BarTooltipItem(
                 'Tgl ${group.x}\n${formatRupiah(rod.toY)}',
                 TextStyle(color: scheme.onInverseSurface, fontSize: 12),
               ),
@@ -283,209 +691,8 @@ class _DailyBarChart extends StatelessWidget {
   }
 }
 
-class _CategoryPieChart extends StatefulWidget {
-  const _CategoryPieChart({required this.controller});
-  final ExpenseController controller;
-
-  @override
-  State<_CategoryPieChart> createState() => _CategoryPieChartState();
-}
-
-class _CategoryPieChartState extends State<_CategoryPieChart> {
-  int _touched = -1;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = widget.controller;
-    final data = c.totalByCategory;
-    if (data.isEmpty) return const _EmptyChart();
-
-    final total = c.totalAmount;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      children: [
-        SizedBox(
-          height: 180,
-          child: PieChart(
-            duration: _chartAnim,
-            curve: _chartCurve,
-            PieChartData(
-              sectionsSpace: 2,
-              centerSpaceRadius: 44,
-              pieTouchData: PieTouchData(
-                touchCallback: (event, response) {
-                  final i = (!event.isInterestedForInteractions ||
-                          response?.touchedSection == null)
-                      ? -1
-                      : response!.touchedSection!.touchedSectionIndex;
-                  if (i != _touched) setState(() => _touched = i);
-                },
-              ),
-              sections: [
-                for (var i = 0; i < data.length; i++)
-                  () {
-                    final cat = c.categoryOf(data[i].key);
-                    final pct = total == 0 ? 0 : data[i].value * 100 / total;
-                    final touched = i == _touched;
-                    return PieChartSectionData(
-                      value: data[i].value.toDouble(),
-                      color: Color(cat?.colorValue ?? 0xFF607D8B),
-                      radius: touched ? 52 : 44,
-                      title: pct >= 8 ? '${pct.round()}%' : '',
-                      titleStyle: textTheme.labelSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  }(),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 6,
-          children: [
-            for (final e in data)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: Color(
-                          c.categoryOf(e.key)?.colorValue ?? 0xFF607D8B),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${c.categoryOf(e.key)?.name ?? '-'} · ${_compact(e.value)}',
-                    style: textTheme.labelMedium,
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _TrendLineChart extends StatelessWidget {
-  const _TrendLineChart({required this.controller});
-  final ExpenseController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final trend = controller.monthlyTrend;
-    if (trend.every((t) => t.$2 == 0)) return const _EmptyChart();
-
-    final scheme = Theme.of(context).colorScheme;
-    final labelStyle = Theme.of(context).textTheme.labelSmall;
-    final maxY = _niceMax(trend.map((t) => t.$2).reduce(math.max));
-
-    return SizedBox(
-      height: 200,
-      child: LineChart(
-        duration: _chartAnim,
-        curve: _chartCurve,
-        LineChartData(
-          minY: 0,
-          maxY: maxY,
-          minX: 0,
-          maxX: (trend.length - 1).toDouble(),
-          lineBarsData: [
-            LineChartBarData(
-              spots: [
-                for (var i = 0; i < trend.length; i++)
-                  FlSpot(i.toDouble(), trend[i].$2.toDouble()),
-              ],
-              isCurved: true,
-              preventCurveOverShooting: true,
-              color: scheme.primary,
-              barWidth: 3,
-              dotData: const FlDotData(show: true),
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    scheme.primary.withValues(alpha: 0.3),
-                    scheme.primary.withValues(alpha: 0),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          gridData: FlGridData(
-            drawVerticalLine: false,
-            horizontalInterval: maxY / 4,
-            getDrawingHorizontalLine: (_) => FlLine(
-              color: scheme.outlineVariant,
-              strokeWidth: 1,
-              dashArray: [4, 4],
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          titlesData: FlTitlesData(
-            topTitles: const AxisTitles(),
-            rightTitles: const AxisTitles(),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 40,
-                interval: maxY / 4,
-                getTitlesWidget: (v, meta) => SideTitleWidget(
-                  meta: meta,
-                  child: Text(_compact(v), style: labelStyle),
-                ),
-              ),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 1,
-                reservedSize: 24,
-                getTitlesWidget: (v, meta) {
-                  final i = v.toInt();
-                  if (i < 0 || i >= trend.length || v != i.toDouble()) {
-                    return const SizedBox.shrink();
-                  }
-                  return SideTitleWidget(
-                    meta: meta,
-                    child: Text(
-                      DateFormat('MMM', 'id_ID').format(trend[i].$1),
-                      style: labelStyle,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => scheme.inverseSurface,
-              getTooltipItems: (spots) => [
-                for (final s in spots)
-                  LineTooltipItem(
-                    '${formatMonth(trend[s.x.toInt()].$1)}\n${formatRupiah(s.y)}',
-                    TextStyle(color: scheme.onInverseSurface, fontSize: 12),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Daftar pengeluaran bulan ini yang tercatat dengan lokasi.
+/// Ditampilkan di dalam [FrostPanel] (tema terang).
 class _LocationHistory extends StatefulWidget {
   const _LocationHistory({required this.controller});
   final ExpenseController controller;
@@ -514,22 +721,37 @@ class _LocationHistoryState extends State<_LocationHistory> {
     final c = widget.controller;
     final items = c.locationHistory;
     final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final canExpand = items.length > _collapsedCount;
+
+    final header = SectionHeader(
+      title: 'Riwayat lokasi',
+      action: canExpand ? (_expanded ? 'Ringkas' : 'Lihat semua') : null,
+      onAction: () => setState(() => _expanded = !_expanded),
+    );
 
     if (items.isEmpty) {
-      return const SizedBox(
-        height: 96,
-        child: Center(
-          child: Text(
-            'Belum ada pengeluaran dengan lokasi.\n'
-            'Tambahkan lokasi saat mencatat pengeluaran.',
-            textAlign: TextAlign.center,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          header,
+          const SizedBox(height: 16),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Belum ada pengeluaran dengan lokasi.\n'
+                'Tambahkan lokasi saat mencatat pengeluaran.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+              ),
+            ),
           ),
-        ),
+        ],
       );
     }
 
-    final visible =
-        _expanded ? items : items.take(_collapsedCount).toList();
+    final visible = _expanded ? items : items.take(_collapsedCount).toList();
 
     // Jumlah transaksi per tempat untuk menampilkan lokasi tersering.
     final visits = <String, int>{};
@@ -543,26 +765,32 @@ class _LocationHistoryState extends State<_LocationHistory> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${items.length} transaksi berlokasi'
-          '${top.value > 1 ? ' · tersering: ${top.key} (${top.value}x)' : ''}',
-          style: theme.textTheme.bodySmall,
+        header,
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                top.value > 1
+                    ? 'Tersering: ${top.key} (${top.value}x)'
+                    : 'Tempat & transaksi',
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(
+              'Nominal',
+              style: theme.textTheme.bodySmall?.copyWith(color: muted),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         for (final e in visible)
           _LocationTile(
             expense: e,
             controller: c,
             onMap: () => _openMap(e),
-          ),
-        if (items.length > _collapsedCount)
-          Center(
-            child: TextButton(
-              onPressed: () => setState(() => _expanded = !_expanded),
-              child: Text(_expanded
-                  ? 'Tampilkan lebih sedikit'
-                  : 'Lihat semua (${items.length})'),
-            ),
           ),
       ],
     );
@@ -583,49 +811,87 @@ class _LocationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = expense;
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
     final cat = controller.categoryOf(e.categoryId);
     final color = Color(cat?.colorValue ?? 0xFF607D8B);
     final place = e.address ??
         LocationService.formatCoordinates(e.latitude!, e.longitude!);
 
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        backgroundColor: color.withValues(alpha: 0.15),
-        child: Icon(iconFor(cat?.icon ?? 'other'), color: color),
-      ),
-      title: Text(
-        e.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.place, size: 14),
-              const SizedBox(width: 2),
-              Expanded(
-                child: Text(
-                  place,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          Text('${formatDate(e.date)} · ${formatRupiah(e.amount)}'),
-        ],
-      ),
-      isThreeLine: true,
-      trailing: IconButton(
-        icon: const Icon(Icons.map_outlined),
-        tooltip: 'Buka di peta',
-        onPressed: onMap,
-      ),
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => ExpenseFormPage(expense: e)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(iconFor(cat?.icon ?? 'other'), color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    e.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.place, size: 13, color: muted),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          place,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: muted),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  formatRupiah(e.amount),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  DateFormat('d MMM', 'id_ID').format(e.date),
+                  style: theme.textTheme.labelSmall?.copyWith(color: muted),
+                ),
+              ],
+            ),
+            IconButton(
+              icon: const Icon(Icons.map_outlined, size: 20),
+              tooltip: 'Buka di peta',
+              visualDensity: VisualDensity.compact,
+              onPressed: onMap,
+            ),
+          ],
+        ),
       ),
     );
   }

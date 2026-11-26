@@ -6,6 +6,7 @@ import 'expense_form_page.dart';
 import 'widgets/category_dropdown.dart';
 import 'widgets/expense_tile.dart';
 import 'widgets/formatters.dart';
+import 'widgets/glass.dart';
 
 /// Riwayat pengeluaran pada bulan yang dipilih di halaman utama,
 /// dengan filter per kategori.
@@ -28,7 +29,9 @@ class _HistoryPageState extends State<HistoryPage> {
         if (_categoryId == null || e.categoryId == _categoryId) e,
     ];
 
-    return Scaffold(
+    return AppBackground(
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text('Riwayat ${formatMonth(controller.selectedMonth)}'),
       ),
@@ -65,6 +68,6 @@ class _HistoryPageState extends State<HistoryPage> {
           ),
         ],
       ),
-    );
+    ));
   }
 }

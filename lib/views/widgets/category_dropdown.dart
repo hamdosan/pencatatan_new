@@ -133,7 +133,6 @@ class _CategoryDropdownState extends State<CategoryDropdown> {
                 isFocused: _open,
                 decoration: InputDecoration(
                   labelText: 'Kategori',
-                  border: const OutlineInputBorder(),
                   errorText: field.errorText,
                   suffixIcon: AnimatedRotation(
                     turns: _open ? 0.5 : 0,

@@ -5,7 +5,9 @@ import '../controllers/expense_controller.dart';
 import '../models/expense.dart';
 import 'expense_form_page.dart';
 import 'history_page.dart';
+import 'theme/app_theme.dart';
 import 'widgets/expense_tile.dart';
+import 'widgets/glass.dart';
 import 'widgets/formatters.dart';
 import 'widgets/month_selector.dart';
 
@@ -25,38 +27,38 @@ class RecordsPage extends StatelessWidget {
     final c = context.watch<ExpenseController>();
 
     return Builder(builder: (_) {
-        if (c.error != null) {
-          return Center(child: Text(c.error!));
-        }
-        return CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: MonthSelector(controller: c)),
-            SliverToBoxAdapter(child: _SummaryCard(controller: c)),
-            if (c.isLoading)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (c.expenses.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: Text('Belum ada pengeluaran bulan ini')),
-              )
-            else
-              SliverList.builder(
-                itemCount: c.expenses.length,
-                itemBuilder: (context, i) {
-                  final e = c.expenses[i];
-                  return ExpenseTile(
-                    expense: e,
-                    onTap: () => _openForm(context, expense: e),
-                  );
-                },
-              ),
-            const SliverToBoxAdapter(child: SizedBox(height: 88)),
-          ],
-        );
-      });
+      if (c.error != null) {
+        return Center(child: Text(c.error!));
+      }
+      return CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(child: MonthSelector(controller: c)),
+          SliverToBoxAdapter(child: _SummaryCard(controller: c)),
+          if (c.isLoading)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (c.expenses.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: Text('Belum ada pengeluaran bulan ini')),
+            )
+          else
+            SliverList.builder(
+              itemCount: c.expenses.length,
+              itemBuilder: (context, i) {
+                final e = c.expenses[i];
+                return ExpenseTile(
+                  expense: e,
+                  onTap: () => _openForm(context, expense: e),
+                );
+              },
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 150)),
+        ],
+      );
+    });
   }
 }
 
@@ -70,47 +72,52 @@ class _SummaryCard extends StatelessWidget {
     final total = controller.totalAmount;
     final breakdown = controller.totalByCategory;
 
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      color: theme.colorScheme.primaryContainer,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const HistoryPage()),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.all(20),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withValues(alpha: 0.2),
+          Colors.white.withValues(alpha: 0.05),
+        ],
+      ),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const HistoryPage()),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Total pengeluaran',
+              style: theme.textTheme.labelLarge
+                  ?.copyWith(color: AppPalette.of(context).muted)),
+          const SizedBox(height: 4),
+          Text(
+            formatRupiah(total),
+            style: theme.textTheme.headlineMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          if (breakdown.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            for (final entry in breakdown.take(4))
+              _CategoryBar(
+                controller: controller,
+                categoryId: entry.key,
+                amount: entry.value,
+                total: total,
+              ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text('Total pengeluaran', style: theme.textTheme.labelLarge),
-              const SizedBox(height: 4),
-              Text(
-                formatRupiah(total),
-                style: theme.textTheme.headlineMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              if (breakdown.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                for (final entry in breakdown.take(4))
-                  _CategoryBar(
-                    controller: controller,
-                    categoryId: entry.key,
-                    amount: entry.value,
-                    total: total,
-                  ),
-              ],
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text('Lihat riwayat bulan ini', style: theme.textTheme.labelMedium),
-                  const Icon(Icons.chevron_right, size: 18),
-                ],
-              ),
+              Text('Lihat riwayat bulan ini',
+                  style: theme.textTheme.labelMedium),
+              const Icon(Icons.chevron_right, size: 18),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -154,7 +161,7 @@ class _CategoryBar extends StatelessWidget {
               value: ratio,
               minHeight: 6,
               color: color,
-              backgroundColor: color.withValues(alpha: 0.2),
+              backgroundColor: AppPalette.of(context).glass,
             ),
           ),
         ],

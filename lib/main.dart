@@ -6,6 +6,7 @@ import 'controllers/expense_controller.dart';
 import 'controllers/theme_controller.dart';
 import 'services/reminder_service.dart';
 import 'views/main_shell.dart';
+import 'views/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,16 +33,8 @@ class ExpenseTrackerApp extends StatelessWidget {
     return MaterialApp(
       title: 'Catatan Pengeluaran',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.teal,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.teal,
-        brightness: Brightness.dark,
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
       themeMode: context.watch<ThemeController>().mode,
       home: const MainShell(),
     );

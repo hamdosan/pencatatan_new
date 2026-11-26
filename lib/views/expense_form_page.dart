@@ -7,6 +7,7 @@ import '../services/location_service.dart';
 import 'widgets/category_dropdown.dart';
 import 'widgets/delete_dialog.dart';
 import 'widgets/formatters.dart';
+import 'widgets/glass.dart';
 
 /// Form tambah / ubah pengeluaran. [expense] null = mode tambah.
 class ExpenseFormPage extends StatefulWidget {
@@ -100,7 +101,6 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
     return InputDecorator(
       decoration: const InputDecoration(
         labelText: 'Lokasi (opsional)',
-        border: OutlineInputBorder(),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,8 +147,8 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
               ),
               if (hasLocation) ...[
                 TextButton.icon(
-                  onPressed: () => LocationService.instance
-                      .openInMaps(_lat!, _lng!),
+                  onPressed: () =>
+                      LocationService.instance.openInMaps(_lat!, _lng!),
                   icon: const Icon(Icons.map_outlined),
                   label: const Text('Peta'),
                 ),
@@ -210,7 +210,9 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
   Widget build(BuildContext context) {
     final categories = context.read<ExpenseController>().categories;
 
-    return Scaffold(
+    return AppBackground(
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(_isEdit ? 'Ubah Pengeluaran' : 'Tambah Pengeluaran'),
         actions: [
@@ -233,10 +235,10 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
                 textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(
                   labelText: 'Judul',
-                  border: OutlineInputBorder(),
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Judul wajib diisi' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Judul wajib diisi'
+                    : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -246,11 +248,12 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
                 decoration: const InputDecoration(
                   labelText: 'Nominal',
                   prefixText: 'Rp ',
-                  border: OutlineInputBorder(),
                 ),
                 validator: (v) {
                   final n = parseThousands(v);
-                  if (n == null || n <= 0) return 'Masukkan nominal lebih dari 0';
+                  if (n == null || n <= 0) {
+                    return 'Masukkan nominal lebih dari 0';
+                  }
                   return null;
                 },
               ),
@@ -267,7 +270,6 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
                 child: InputDecorator(
                   decoration: const InputDecoration(
                     labelText: 'Tanggal',
-                    border: OutlineInputBorder(),
                     suffixIcon: Icon(Icons.calendar_today),
                   ),
                   child: Text(formatDate(_date)),
@@ -280,7 +282,6 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
                 decoration: const InputDecoration(
                   labelText: 'Catatan (opsional)',
                   alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -295,6 +296,6 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
           ),
         ),
       ),
-    );
+    ));
   }
 }
