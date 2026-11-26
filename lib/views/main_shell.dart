@@ -9,6 +9,7 @@ import 'history_page.dart';
 import 'recap_page.dart';
 import 'records_page.dart';
 import 'theme/app_theme.dart';
+import 'widgets/burn_tap.dart';
 import 'widgets/glass.dart';
 import 'widgets/update_dialog.dart';
 
@@ -144,7 +145,8 @@ class _MainShellState extends State<MainShell>
                 padding: const EdgeInsets.fromLTRB(28, 24, 16, 16),
                 child: Text(
                   'Catatan Pengeluaran',
-                  style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style:
+                      text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               const NavigationDrawerDestination(
@@ -193,17 +195,13 @@ class _MainShellState extends State<MainShell>
             ),
             child: KeyedSubtree(key: ValueKey(_index), child: _pages[_index]),
           ),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerFloat,
-          floatingActionButton: _AddButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ExpenseFormPage()),
-            ),
-          ),
           bottomNavigationBar: _DotNavBar(
             labels: _tabs,
             selected: _index,
             onSelect: _select,
+            onAdd: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ExpenseFormPage()),
+            ),
           ),
         ),
       ),
@@ -222,7 +220,7 @@ class _AddButton extends StatelessWidget {
     const navy = Color(0xFF17304F);
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        shape: BoxShape.circle,
         gradient: LinearGradient(
           colors: [p.panelTop, const Color(0xFFE3DDF7)],
         ),
@@ -236,33 +234,14 @@ class _AddButton extends StatelessWidget {
       ),
       child: Material(
         color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
           onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 24, 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: navy.withValues(alpha: 0.12),
-                  ),
-                  child: const Icon(Icons.add, color: navy, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Tambah Pengeluaran',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: navy,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ],
-            ),
+          child: const SizedBox(
+            width: 52,
+            height: 52,
+            child: Icon(Icons.add, color: navy, size: 28),
           ),
         ),
       ),
@@ -276,17 +255,21 @@ class _DotNavBar extends StatelessWidget {
     required this.labels,
     required this.selected,
     required this.onSelect,
+    required this.onAdd,
   });
 
   final List<String> labels;
   final int selected;
   final ValueChanged<int> onSelect;
+  final VoidCallback onAdd;
+
+  static const _iconsOff = [Icons.home_outlined, Icons.receipt_long_outlined];
+  static const _iconsOn = [Icons.home_rounded, Icons.receipt_long];
 
   @override
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -299,29 +282,31 @@ class _DotNavBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: 64,
+        child: Container(
+          height: 64 + 15,
+          padding: const EdgeInsets.only(bottom: 15),
           child: Row(
             children: [
-              for (var i = 0; i < labels.length; i++)
+              for (var i = 0; i < labels.length; i++) ...[
+                if (i == 1)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: _AddButton(onPressed: onAdd),
+                  ),
                 Expanded(
                   child: InkWell(
                     onTap: () => onSelect(i),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 200),
-                          style: (text.labelLarge ?? const TextStyle())
-                              .copyWith(
-                            color: i == selected
-                                ? scheme.onSurface
-                                : p.muted,
-                            fontWeight: i == selected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
+                        BurnGlow(
+                          active: i == selected,
+                          child: Icon(
+                            i == selected ? _iconsOn[i] : _iconsOff[i],
+                            size: 26,
+                            color: i == selected ? scheme.onSurface : p.muted,
+                            semanticLabel: labels[i],
                           ),
-                          child: Text(labels[i]),
                         ),
                         const SizedBox(height: 6),
                         AnimatedContainer(
@@ -337,6 +322,7 @@ class _DotNavBar extends StatelessWidget {
                     ),
                   ),
                 ),
+              ],
             ],
           ),
         ),
